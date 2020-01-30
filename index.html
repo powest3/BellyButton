@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Belly Button Biodiversity</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <!--link rel="stylesheet" href="style.css"-->
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+</head>
+
+<body>
+
+  <div class="container-fluid" id="cont1">
+    <div class="jumbotron text-center">
+      <h1 id="bbheading">Belly Button Bacteria Biodiversity Dashboard</h1>
+      <p>Use the interactive charts to explore the dataset. Select a sample to see its detailed data in the graphs.
+        Notice the bacteria details when the mouse hovers over any of the points in the graphs.
+      </p>
+      <p>
+        This project used JavaScript, Plotly.JS, Python, HTML, CSS, Bootstrap, and Flask to explore the Belly Button Bacteria Biodiversity dataset.
+   
+
+      </p>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-2 col-s-2 col-md-2" >
+        <div class="demo-content responsive">
+          <h4>Select Sample</h4>
+          <div class="dropdown">
+            <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+              <select id="selDataset" onchange="optionChanged(this.value)"></select>
+            </button>
+          </div>
+
+          <div id="meta_data" class="panel panel-success responsive">
+            <div class="panel-heading responsive">
+              <h3 class="panel-title">Sample MetaData</h3>
+            </div>
+            <div id="meta_list">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!! PIE CHART -->
+      <div class="col-xs-5 col-s-5 col-md-5">
+      	<div class="demo-content responsive">
+          <div id="pie_chart">
+          </div>
+
+        </div>
+      </div>
+      <!! GAUGE CHART -->
+      <div class="col-xs-4 col-s-4 col-md-4">
+      	<div class="demo-content responsive">
+          <div id="gauge_chart"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <hr>
+    </div>
+    <!! BUBBLE CHART -->
+    <div class="row">
+      <div class="col-xs-1" "col-s-1" "col-md-1">
+      </div>
+      <div class="col-xs-11" "col-s-11" "col-md-11">
+        <div id="bubble_chart"></div>
+      </div>
+    </div>
+  </div>
+
+
+    <script>
+
+      var originalWidth = document.getElementById('cont1').clientWidth;
+      var gaugeMarkerSize = 20;
+
+      //make responsive/resizable with event listeners for resize; resize the charts proportionally
+      //Note: the pie chart is in a column of size 5 (out of 12); gauge is size 4 out of 12
+      window.addEventListener('resize', function() {
+        var containerWidth = document.getElementById('cont1').clientWidth;
+        var new_width = containerWidth * 5/12;
+
+        var pie_chg_size = {width:new_width, height:new_width};
+        var bubble_chg_size = {width: new_width*2};
+        Plotly.relayout('pie_chart', pie_chg_size);
+        Plotly.relayout('bubble_chart', bubble_chg_size);
+
+        var new_width = containerWidth / 3;
+        //make the marker size for the pointer circle proportional to the new size of the graph
+        var new_marker_size = gaugeMarkerSize * (containerWidth / originalWidth);
+        var gauge_chg_size = {width:new_width, height:new_width};
+        Plotly.restyle('gauge_chart', 'marker', [{size: new_marker_size, color:'orchid'},{colors: mycolorsgauge} ]);
+        Plotly.relayout('gauge_chart', gauge_chg_size);
+      });
+
+
+
+        //default to the first sample so that data is displayed upon startup
+        var new_sample_number = "940";
+        var new_sample = "BB_"+new_sample_number;
+
+        //set the colorscale and colors for all the graphs
+        var mycolorscale = [
+          ['0.0', 'rgba(255, 0, 0,.5)'],
+          ['0.111111111111', 'rgba(255, 128, 0, .5)'],
+          ['0.222222222222', 'rgba(255, 255, 0 .5)'],
+          ['0.333333333333', 'rgba(128, 255, 0 .5)'],
+          ['0.444444444444', 'rgba(0, 255, 255 .5)'],
+          ['0.555555555556', 'rgba(0, 128, 255 .5)'],
+          ['0.666666666667', 'rgba(0, 0, 255 .5)'],
+          ['0.777777777778', 'rgba(128, 0, 255 .5)'],
+          ['0.888888888889', 'rgba(255, 0, 255 .5)'],
+          ['1.0', 'rgba(255, 0, 64 .5)']
+        ];
+
+        var mycolors = ['rgba(255, 0, 0, .5)', 'rgba(255, 128, 0, .5)',
+                               'rgba(255, 255, 0, .5)', 'rgba(128, 255, 0, .5)',
+                               'rgba(0, 255, 255, .5)', 'rgba(0, 128, 255, .5)',
+                               'rgba(0, 0, 255, .5)', 'rgba(128, 0, 255, .5)', 'rgba(191,0,255,.5)',
+                               'rgba(255, 0, 255, .5)', 'rgba(255, 0, 128, 0,.5)', 'rgba(255,0,0,.8)'];
+
+
+        var mycolorsgauge = mycolors.slice(0,9);
+        //the last color for the gauge needs to be white so that the bottom of the circle does not show
+        mycolorsgauge.push('rgba(255,255,255,0)');
+
+
+        //build the dropdown button with the sample IDs
+        function build_dropdown_button(data_names) {
+          //loop through the data_names
+          for (i=0; i<data_names.length; i++) {
+            var optn = document.createElement("OPTION");
+            var element = document.getElementById("selDataset").options.add(optn);
+            optn.text = data_names[i];
+            optn.value = data_names[i];
+          }
+        }
+
+        //refresh the charts using the data for the newly selected sample
+        function optionChanged(new_sample) {
+
+          new_sample_number = new_sample.slice(3);
+
+          //get the metadata and display
+          Plotly.d3.json("/metadata/"+new_sample_number, function(error, data_meta){
+              if (error) return console.warn(error);
+              console.log(data_meta);
+              build_meta_data(data_meta, new_sample_number);
+
+              //update the washing gauge chart
+              build_gauge_chart(data_meta);
+          })
+
+          //get sample and OTU data for the new_sample
+          Plotly.d3.json("/samples/"+new_sample_number, function(error, new_data_sample){
+              if (error) return console.warn(error);
+
+              //Set the top 10 values
+              var new_top_ten_values = [];
+              var new_top_ten_otu_id = [];
+              var new_top_ten_otu_desc = [];
+
+              for (i=0; i<10; i++) {
+                //only include if non-zero
+                if (new_data_sample[0].sample_values[i] > 0) {
+                  new_top_ten_values.push(new_data_sample[0].sample_values[i]);
+                  new_top_ten_otu_id.push(new_data_sample[0].otu_id[i]);
+                  new_top_ten_otu_desc.push(new_data_sample[0].otu_desc[i]);
+                }
+              }
+              //update the pie chart, bubble chart with the new data
+              updatePlotly(new_top_ten_values, new_top_ten_otu_id, new_top_ten_otu_desc,new_data_sample,new_sample_number);
+          })
+        }
+
+
+        //Build the initial pie chart for the input sample
+        function build_pie_chart(data_sample, sample_number) {
+
+            //set the top 10 values
+            var top_ten_values = [];
+            var top_ten_otu_id = [];
+            var top_ten_otu_desc = [];
+
+            //only include if non-zero
+            for (i=0; i<10; i++) {
+              if (data_sample[0].sample_values[i] > 0 ) {
+                top_ten_values.push(data_sample[0].sample_values[i]);
+                top_ten_otu_id.push(data_sample[0].otu_id[i]);
+                top_ten_otu_desc.push(data_sample[0].otu_desc[i]);
+              }
+            }
+
+            //set the layout and the pie data
+            var pie_chart_layout = {
+                title: "Top 10 Samples for BB_"+ sample_number,
+                height: 600,
+                width: 600
+                };
+            var pie_data = [{
+                values: top_ten_values,
+                labels: top_ten_otu_id,
+                type: "pie",
+                hovertext: top_ten_otu_desc,
+                'marker': {'colors': mycolors},
+            }];
+
+            //plot the pie chart
+            Plotly.plot("pie_chart", pie_data, pie_chart_layout);
+          }
+
+
+          //Build the initial bubble chart for the input sample
+          function build_bubble_chart(data_sample, sample_number) {
+
+                var bubble_chart_layout = {
+                    title: "All BB_"+ sample_number +" Samples",
+                    height: 700,
+                    width: 1200,
+                    xaxis: { title: "OTU IDs" },
+                    yaxis: { title: "Sample Values" }
+                    };
+                var bubble_data = [{
+                    x: data_sample[0].otu_id,
+                    y: data_sample[0].sample_values,
+                    mode: "markers",
+                    marker: {
+                      size: data_sample[0].sample_values,
+                      colorscale: mycolorscale,
+                      color: data_sample[0].otu_id,
+                    },
+                    type: "bubble",
+                    text: data_sample[0].otu_desc,
+                  }];
+
+                //plot the bubble chart
+                Plotly.plot("bubble_chart", bubble_data, bubble_chart_layout);
+            }
+
+              //update the pie chart and the bubble chart after a new data sample has been selected
+              function updatePlotly(new_top_ten_values, new_top_ten_otu_id, new_top_ten_otu_desc,new_data_sample,new_sample_number) {
+                  //update the PIE chart
+                  var PIE = document.getElementById("pie_chart");
+                  Plotly.relayout(PIE, "title", "Top Ten BB_"+ new_sample_number +" Samples");
+                  Plotly.restyle(PIE, "values", [new_top_ten_values]);
+                  Plotly.restyle(PIE, "labels", [new_top_ten_otu_id]);
+                  Plotly.restyle(PIE, "hovertext", [new_top_ten_otu_desc]);
+
+                  //update the Bubble chart
+                  var BUBBLE = document.getElementById("bubble_chart");
+                  Plotly.relayout(BUBBLE, "title", "All BB_"+ new_sample_number +" Samples");
+                  Plotly.restyle(BUBBLE, "x", [new_data_sample[0].otu_id]);
+                  Plotly.restyle(BUBBLE, "y", [new_data_sample[0].sample_values]);
+                  Plotly.restyle(BUBBLE, "text", [new_data_sample[0].otu_desc]);
+                  Plotly.restyle(BUBBLE, "marker.color", [new_data_sample[0].otu_id]);
+              }
+
+
+              //function to create the gauge chart (level is the washing frequency)
+              function build_gauge_chart(data_meta) {
+
+                //extract the washing frequency from the meta data
+                var level = data_meta['WFREQ'];
+
+                // Trig to calc meter point
+                  var degrees = (9 - level)*20,
+                       radius = .5;
+                  var radians = degrees * Math.PI / 180;
+                  var x = radius * Math.cos(radians);
+                  var y = radius * Math.sin(radians);
+
+                  // Path:
+                  var mainPath = 'M -.0 -0.025 L .0 0.025 L ',
+                       pathX = String(x),
+                       space = ' ',
+                       pathY = String(y),
+                       pathEnd = ' Z';
+                  var path = mainPath.concat(pathX,space,pathY,pathEnd);
+
+                  var data = [{ type: 'scatter',
+                      x: [0], y:[0],
+                      marker: {size: gaugeMarkerSize, color:'orchid'},
+                      showlegend: false,
+                      name: 'frequency',
+                      text: level,
+                      hoverinfo: 'text'},
+                    { values: [40/9, 40/9, 40/9, 40/9, 40/9, 40/9,40/9, 40/9, 40/9,  40],
+                      rotation: 90,
+                      text: ['8-9', '7-8', '6-7', '5-6','4-5','3-4','2-3', '1-2', '0-1', ''],
+                      textinfo: 'text',
+                      textposition:'inside',
+                      marker: {colors: mycolorsgauge},
+                      labels: ['8-9', '7-8', '6-7', '5-6','4-5','3-4','2-3', '1-2', '0-1', ''],
+                      hoverinfo: 'label',
+                      hole: .5,
+                      type: 'pie',
+                      showlegend: false
+                  }];
+
+                  var layout = {
+                    shapes:[{
+                        type: 'path',
+                        path: path,
+                        fillcolor: 'orchid',
+                        line: {
+                          color: 'orchid'
+                        }
+                      }],
+                    title: 'Belly Button Washing Frequency<br>Scrubs per Week',
+                    height: 500,
+                    width: 500,
+                    xaxis: {zeroline:false, showticklabels:false,
+                               showgrid: false, range: [-1, 1]},
+                    yaxis: {zeroline:false, showticklabels:false,
+                               showgrid: false, range: [-1, 1]}
+                  };
+
+                  Plotly.newPlot('gauge_chart', data, layout);
+              }
+
+
+
+
+              //function build_meta data
+              function build_meta_data(data_meta,sample) {
+
+                var app = document.querySelector("#meta_list");
+
+                  //first need to remove any data that might be there, and then populate it
+                  //get the H6 data associated with the #meta_list
+                  var h6data = document.querySelector("#meta_list > h6");
+                  if (h6data !== null) {
+                    for (i=0; i<6; i++) {
+                      var h6data = document.querySelector("#meta_list > h6");
+                      app.removeChild(h6data);
+                    }
+                  }
+
+                  //put the metadata into h6 tags
+                  var h6data = document.createElement("h6");
+                  h6data.innerHTML = "SAMPLEID: " + "BB_" + sample;
+                  app.appendChild(h6data);
+
+                  metalabels = ['AGE','BBTYPE','ETHNICITY','GENDER','LOCATION'];
+                  for (label in metalabels) {
+                    var h6data = document.createElement("h6");
+                    h6data.innerHTML = metalabels[label] + ": " + data_meta[metalabels[label]];
+                    app.appendChild(h6data);
+                  }
+                }
+
+
+
+        //get all the initial data, using the default sample id
+        function getData() {
+
+            //get the sample names and build the dropdown button with all the sample names (IDs)
+            Plotly.d3.json("/names", function(error, data_names){
+                if (error) return console.warn(error);
+                build_dropdown_button(data_names);
+            })
+
+            //get the OTU descriptions
+            Plotly.d3.json("/otu", function(error, data_otu){
+                if (error) return console.warn(error);
+            })
+
+            //get the metadata and build the display of the metadata and washing frequency
+            Plotly.d3.json("/metadata/"+new_sample_number, function(error, data_meta){
+                if (error) return console.warn(error);
+                build_meta_data(data_meta, new_sample_number);
+                build_gauge_chart(data_meta);
+            })
+
+            //get the detailed sample data, and merge it with the related OTU data; then build the pie and bubble charts
+            Plotly.d3.json("/samples/"+new_sample_number, function(error, data_sample){
+                if (error) return console.warn(error);
+
+                build_pie_chart(data_sample, new_sample_number);
+                build_bubble_chart(data_sample, new_sample_number);
+
+            })
+
+        }
+
+        //get all the initial data and build the charts and metadata display
+        getData();
+
+
+    
+
+</body>
+</html>
